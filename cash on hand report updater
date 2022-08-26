@@ -1,0 +1,257 @@
+Sub Update_cash_file()
+
+Dim lastDate
+Dim WFS_Cash
+Dim WFS_Payable
+Dim AWF_Cash
+Dim AWF_Payable
+Dim AMF_Cash
+Dim AMF_Payable
+Dim SFP_Cash
+Dim SFP_Payable
+Dim lastCell
+Dim company
+Dim i As Long
+Dim No_Of_Rows As Integer
+Dim Last_Payable As Integer
+Dim offset As Integer
+Dim cash As Integer
+Dim payable As Integer
+Dim cash_remain As Integer
+
+    
+
+'all workbooks / worksheets
+Dim wb As Excel.Workbook
+Dim ws_Cash As Excel.Worksheet
+Dim ws_WFS As Excel.Worksheet
+Dim ws_AWF As Excel.Worksheet
+Dim ws_AMF As Excel.Worksheet
+Dim ws_SFP As Excel.Worksheet
+
+'set active workbooks and worksheets
+Set wb = ActiveWorkbook
+Set ws_Cash = wb.Sheets("Cash")
+Set ws_WFS = wb.Sheets("WFS_data")
+Set ws_AWF = wb.Sheets("AWF_data")
+Set ws_AMF = wb.Sheets("AMF_data")
+Set ws_SFP = wb.Sheets("SFP_data")
+
+
+
+lastDate = Range("a1").End(xlToRight).Value ' saves value from last column 'set the data
+If lastDate < Date Then
+    MsgBox "The Data is about to be updated, this can take a few seconds, please click okay to start"
+    Application.StatusBar = "Please Wait, Magic is happening"
+    'update queries
+    Dim qry As WorkbookConnection
+
+    For Each qry In ActiveWorkbook.Connections
+    qry.ODBCConnection.BackgroundQuery = False
+    qry.Refresh
+    qry.ODBCConnection.BackgroundQuery = True
+    Next qry
+    
+Do Until lastDate = Date 'if date of data is not up to date
+
+     'Add new Date value
+    'MsgBox "a1"
+    'lastCell = Range("a1").End(xlToRight).Select '  selects last column(first row) with data in it.
+    lastDate = Range("a1").End(xlToRight).Value ' saves value from last column
+    If lastDate > Date Then Exit Do ' prevents data from spilling into future dates.
+    lastDate = DateAdd("d", 1, lastDate) 'adds one day to value in last column
+    Range("a1").End(xlToRight).offset(0, 1) = lastDate ' inserts new date one cell to the right
+    
+    
+    '''''''''''''''''''''''' Start WFS''''''''''''''''''''''''''''''''''''''''''
+   '' Set company = wb.Sheets("WFS_data")
+    offset = 2
+    ' WFS cash account
+    No_Of_Rows = ws_WFS.Range("A1").End(xlDown).Row
+    i = No_Of_Rows
+    Do While ws_WFS.Cells(i, 4) = "1015-00"    ' 1 is debit, 2 is cred, 4 account, 5 is payable EOD, 6 is Cash EOD, 9 is searchable date EOD
+        If ws_WFS.Cells(i, 9) = lastDate Then 'And ws_WFS.Cells(i, 4) = "1015-00" Then 'check if date is listed
+         ws_Cash.Range("a1").End(xlToRight).offset(offset, 0) = ws_WFS.Cells(i, 6) 'grab data put on main sheet
+         'MsgBox "b2"
+         Exit Do
+        ElseIf ws_WFS.Cells(i, 9) < lastDate Then 'And ws_WFS.Cells(i, 4) = "1015-00" Then   'if date is not present, find closest oldest date, and use that data
+          ws_Cash.Range("a1").End(xlToRight).offset(offset, 0) = ws_Cash.Range("a1").End(xlToRight).offset(offset, -1)
+          'MsgBox "b3"
+          Exit Do
+        End If
+        'Application.StatusBar = i 'status bar telling you how many rows you are on. remove or edit for final prodcut***********
+        i = i - 1
+    Loop
+
+    
+        'Application.StatusBar = False
+    
+    'WFS PAYABLE
+    Last_Payable = ws_WFS.Columns("G").Find("*", SearchDirection:=xlPrevious, SearchOrder:=xlByRows, LookIn:=xlValues).Row
+    j = Last_Payable
+    Do While ws_WFS.Cells(j, 4) = "2100-00"    ' 1 is debit, 2 is cred, 4 account, 5 is payable EOD, 6 is Cash EOD, 9 is searchable date EOD
+         If ws_WFS.Cells(j, 9) = lastDate Then ' And ws_WFS.Cells(i, 4) = "2100-00" Then 'check if date is listed
+         ws_Cash.Range("a1").End(xlToRight).offset(offset + 1, 0) = ws_WFS.Cells(j, 5) 'grab data put on main sheet
+         'MsgBox "c2"
+         Exit Do
+        ElseIf ws_WFS.Cells(j, 9) < lastDate Then 'And company.Cells(j, 4) = "2100-00" Then   'if date is not present, find closest oldest date, and use that data
+         ws_Cash.Range("a1").End(xlToRight).offset(offset + 1, 0) = ws_Cash.Range("a1").End(xlToRight).offset(offset + 1, -1)
+         Exit Do
+        End If
+       ' Application.StatusBar = j 'status bar telling you how many rows you are on. remove or edit for final prodcut***********
+        j = j - 1
+    Loop
+        'payable = ws_Cash.Range("a1").End(xlToRight).offset(offset, 0)
+       ' Application.StatusBar = False
+        
+     ws_Cash.Range("a1").End(xlToRight).offset(offset + 2, 0).Value = ws_Cash.Range("a1").End(xlToRight).offset(offset, 0).Value - ws_Cash.Range("a1").End(xlToRight).offset(offset + 1, 0).Value
+   
+    '''''''''''''''''''''''' End WFS''''''''''''''''''''''''''''''''''''''''''
+    
+    
+    
+        '''''''''''''''''''''''' Start AWF''''''''''''''''''''''''''''''''''''''''''
+    ' AWF cash account
+    No_Of_Rows = ws_AWF.Range("A1").End(xlDown).Row
+    i = No_Of_Rows
+      offset = 6
+    Do While ws_AWF.Cells(i, 4) = "1015"    ' 1 is debit, 2 is cred, 4 account, 5 is payable EOD, 6 is Cash EOD, 9 is searchable date EOD
+        If ws_AWF.Cells(i, 9) = lastDate Then 'And ws_AWF.Cells(i, 4) = "1015-00" Then 'check if date is listed
+        ws_Cash.Range("a1").End(xlToRight).offset(offset, 0) = ws_AWF.Cells(i, 6) 'grab data put on main sheet
+         'MsgBox "b2"
+         Exit Do
+        ElseIf ws_AWF.Cells(i, 9) < lastDate Then 'And ws_AWF.Cells(i, 4) = "1015-00" Then   'if date is not present, find closest oldest date, and use that data
+          ws_Cash.Range("a1").End(xlToRight).offset(offset, 0) = ws_Cash.Range("a1").End(xlToRight).offset(offset, -1)
+          'MsgBox "b3"
+          Exit Do
+        End If
+        'Application.StatusBar = i 'status bar telling you how many rows you are on. remove or edit for final prodcut***********
+       i = i - 1
+    Loop
+    
+        'Application.StatusBar = False
+    
+    'awf PAYABLE
+    Last_Payable = ws_AWF.Columns("G").Find("*", SearchDirection:=xlPrevious, SearchOrder:=xlByRows, LookIn:=xlValues).Row
+    j = Last_Payable
+    Do While ws_AWF.Cells(j, 4) = "2100"    ' 1 is debit, 2 is cred, 4 account, 5 is payable EOD, 6 is Cash EOD, 9 is searchable date EOD
+         If ws_AWF.Cells(j, 9) = lastDate Then ' And ws_WFS.Cells(i, 4) = "2100" Then 'check if date is listed
+         ws_Cash.Range("a1").End(xlToRight).offset(offset + 1, 0) = ws_AWF.Cells(j, 5) 'grab data put on main sheet
+         'MsgBox "c2"
+         Exit Do
+        ElseIf ws_AWF.Cells(j, 9) < lastDate Then 'And ws_AWF.Cells(j, 4) = "2100" Then   'if date is not present, find closest oldest date, and use that data
+          ws_Cash.Range("a1").End(xlToRight).offset(offset + 1, 0) = ws_Cash.Range("a1").End(xlToRight).offset(offset + 1, -1)
+         'MsgBox "c3"
+          Exit Do
+        End If
+        'Application.StatusBar = j 'status bar telling you how many rows you are on. remove or edit for final prodcut***********
+        j = j - 1
+    Loop
+        'Application.StatusBar = False
+        
+     ws_Cash.Range("a1").End(xlToRight).offset(offset + 2, 0).Value = ws_Cash.Range("a1").End(xlToRight).offset(offset, 0).Value - ws_Cash.Range("a1").End(xlToRight).offset(offset + 1, 0).Value
+
+    '''''''''''''''''''''''' End AWF''''''''''''''''''''''''''''''''''''''''''
+    
+    '''''''''''''''''''''''''Start AmF'''''''''''''''''''''''''''''''''''''''''''
+    ' AmF cash account
+    No_Of_Rows = ws_AMF.Range("A1").End(xlDown).Row
+    i = No_Of_Rows
+    offset = 10
+    Do While ws_AMF.Cells(i, 4) = "1015-00"    ' 1 is debit, 2 is cred, 4 account, 5 is payable EOD, 6 is Cash EOD, 9 is searchable date EOD
+        If ws_AMF.Cells(i, 9) = lastDate Then 'And ws_AmF.Cells(i, 4) = "1015-00" Then 'check if date is listed
+        ws_Cash.Range("a1").End(xlToRight).offset(offset, 0) = ws_AMF.Cells(i, 6) 'grab data put on main sheet
+         'MsgBox "b2"
+         Exit Do
+        ElseIf ws_AMF.Cells(i, 9) < lastDate Then 'And ws_AmF.Cells(i, 4) = "1015-00" Then   'if date is not present, find closest oldest date, and use that data
+          ws_Cash.Range("a1").End(xlToRight).offset(offset, 0) = ws_Cash.Range("a1").End(xlToRight).offset(offset, -1)
+          'MsgBox "b3"
+          Exit Do
+        End If
+        'Application.StatusBar = i 'status bar telling you how many rows you are on. remove or edit for final prodcut***********
+        i = i - 1
+    Loop
+    
+        'Application.StatusBar = False
+    
+    'AmF PAYABLE
+    Last_Payable = ws_AMF.Columns("G").Find("*", SearchDirection:=xlPrevious, SearchOrder:=xlByRows, LookIn:=xlValues).Row
+    j = Last_Payable
+    Do While ws_AMF.Cells(j, 4) = "2100-00"    ' 1 is debit, 2 is cred, 4 account, 5 is payable EOD, 6 is Cash EOD, 9 is searchable date EOD
+         If ws_AMF.Cells(j, 9) = lastDate Then ' And ws_WmS.Cells(i, 4) = "2100-00" Then 'check if date is listed
+         ws_Cash.Range("a1").End(xlToRight).offset(offset + 1, 0) = ws_AMF.Cells(j, 5) 'grab data put on main sheet
+        'MsgBox "c2"
+         Exit Do
+        ElseIf ws_AMF.Cells(j, 9) < lastDate Then 'And ws_AmF.Cells(j, 4) = "2100-00" Then   'if date is not present, find closest oldest date, and use that data
+          ws_Cash.Range("a1").End(xlToRight).offset(offset + 1, 0) = ws_Cash.Range("a1").End(xlToRight).offset(offset + 1, -1)
+         'MsgBox "c3"
+          Exit Do
+        End If
+        'Application.StatusBar = j 'status bar telling you how many rows you are on. remove or edit for final prodcut***********
+        j = j - 1
+    Loop
+        'Application.StatusBar = False
+        
+     ws_Cash.Range("a1").End(xlToRight).offset(offset + 2, 0).Value = ws_Cash.Range("a1").End(xlToRight).offset(offset, 0).Value - ws_Cash.Range("a1").End(xlToRight).offset(offset + 1, 0).Value
+    '''''''''''''''''''''''''end AmF'''''''''''''''''''''''''''''''''''''''''''
+    
+    
+        '''''''''''''''''''''''''Start SFP'''''''''''''''''''''''''''''''''''''''''''
+    ' SFP cash account
+    'MsgBox "a1"
+    No_Of_Rows = ws_SFP.Range("A1").End(xlDown).Row
+    i = No_Of_Rows
+    offset = 14
+    Do While ws_SFP.Cells(i, 4) = "1015-00"    ' 1 is debit, 2 is cred, 4 account, 5 is payable EOD, 6 is Cash EOD, 9 is searchable date EOD
+        If ws_SFP.Cells(i, 9) = lastDate Then 'And ws_AmF.Cells(i, 4) = "1015-00" Then 'check if date is listed
+        ws_Cash.Range("a1").End(xlToRight).offset(offset, 0) = ws_SFP.Cells(i, 6) 'grab data put on main sheet
+         'MsgBox "b2"
+         Exit Do
+        ElseIf ws_SFP.Cells(i, 9) < lastDate Then 'And ws_SFP.Cells(i, 4) = "1015-00" Then   'if date is not present, find closest oldest date, and use that data
+          ws_Cash.Range("a1").End(xlToRight).offset(offset, 0) = ws_Cash.Range("a1").End(xlToRight).offset(offset, -1)
+         ' MsgBox "b3"
+          Exit Do
+        End If
+        'Application.StatusBar = i 'status bar telling you how many rows you are on. remove or edit for final prodcut***********
+        i = i - 1
+    Loop
+    
+        'Application.StatusBar = False
+    
+    'sfp PAYABLE
+    Last_Payable = ws_SFP.Columns("G").Find("*", SearchDirection:=xlPrevious, SearchOrder:=xlByRows, LookIn:=xlValues).Row
+    j = Last_Payable
+    Do While ws_SFP.Cells(j, 4) = "2100-00"    ' 1 is debit, 2 is cred, 4 account, 5 is payable EOD, 6 is Cash EOD, 9 is searchable date EOD
+         If ws_SFP.Cells(j, 9) = lastDate Then ' And ws_SFP.Cells(i, 4) = "2100-00" Then 'check if date is listed
+         ws_Cash.Range("a1").End(xlToRight).offset(offset + 1, 0) = ws_SFP.Cells(j, 5) 'grab data put on main sheet
+         'MsgBox "c2"
+         Exit Do
+        ElseIf ws_SFP.Cells(j, 9) < lastDate Then 'And ws_SFP.Cells(j, 4) = "2100-00" Then   'if date is not present, find closest oldest date, and use that data
+          ws_Cash.Range("a1").End(xlToRight).offset(offset + 1, 0) = ws_Cash.Range("a1").End(xlToRight).offset(offset + 1, -1)
+         'MsgBox "c3"
+          Exit Do
+        End If
+       ' Application.StatusBar = j 'status bar telling you how many rows you are on. remove or edit for final prodcut***********
+        j = j - 1
+    Loop
+        'Application.StatusBar = False
+        
+     ws_Cash.Range("a1").End(xlToRight).offset(offset + 2, 0).Value = ws_Cash.Range("a1").End(xlToRight).offset(offset, 0).Value - ws_Cash.Range("a1").End(xlToRight).offset(offset + 1, 0).Value
+    '''''''''''''''''''''''''end SFP'''''''''''''''''''''''''''''''''''''''''''
+    
+    
+    ' add up totals
+     ws_Cash.Range("a1").End(xlToRight).offset(18, 0).Value = ws_Cash.Range("a1").End(xlToRight).offset(2, 0).Value + ws_Cash.Range("a1").End(xlToRight).offset(6, 0).Value + ws_Cash.Range("a1").End(xlToRight).offset(10, 0).Value + ws_Cash.Range("a1").End(xlToRight).offset(14, 0).Value 'totals up cash
+     ws_Cash.Range("a1").End(xlToRight).offset(19, 0).Value = ws_Cash.Range("a1").End(xlToRight).offset(4, 0).Value + ws_Cash.Range("a1").End(xlToRight).offset(8, 0).Value + ws_Cash.Range("a1").End(xlToRight).offset(12, 0).Value + ws_Cash.Range("a1").End(xlToRight).offset(16, 0).Value 'totals up cash remaining after payables
+Loop
+Else
+    MsgBox "Data updated, please check back tomorrow"
+End If
+    Application.StatusBar = False
+
+
+End Sub
+
+Private Sub CommandButton1_Click()
+
+End Sub
